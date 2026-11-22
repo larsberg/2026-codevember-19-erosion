@@ -2,6 +2,15 @@ import { MathUtils, MOUSE, Spherical, TOUCH, Vector3 } from "three";
 
 export const MIN_CAMERA_DISTANCE = 1;
 export const DEFAULT_FOLLOW_SMOOTHING = 0.45;
+const strikePoint = new Vector3();
+
+export function strikePan(camera, center, normal, radius) {
+  strikePoint.copy(center).addScaledVector(normal, radius);
+  // One sphere radius spans center to ear, even when the camera is zoomed out.
+  const x = camera.worldToLocal(strikePoint).x;
+  return .5 + .5 * MathUtils.clamp(x / radius, -1, 1);
+}
+
 export function configureOrbitInputs(controls) {
   controls.minDistance = MIN_CAMERA_DISTANCE;
   controls.enablePan = false;

@@ -8,7 +8,7 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { applyCameraView, captureCameraView, configureOrbitInputs } from './camera.js';
+import { applyCameraView, captureCameraView, configureOrbitInputs, strikePan } from './camera.js';
 import { initPhysics } from './physics.js';
 import { createLaserScore } from './laser-score.js';
 import { bindSphereAim } from './aim.js';
@@ -98,11 +98,9 @@ function configureGrid({ gridDivisions, gridOpacity }, palette) {
 }
 
 const score = createLaserScore();
-const strikePoint = new Vector3();
 function playStrike(axis, center, radius, manual) {
   if (!score.ready) return;
-  const x = strikePoint.copy(center).addScaledVector(axis, radius).project(camera).x;
-  score.hit(axis.y, Math.min(1, Math.max(0, .5 + .5 * x)), manual);
+  score.hit(axis.y, strikePan(camera, center, axis, radius), manual);
 }
 let simulation;
 function rebuild(next) {
@@ -307,8 +305,8 @@ let previousTime;
 renderer.setAnimationLoop(now => {
   const dt = (now - (previousTime ?? now)) / 1000;
   previousTime = now;
-  if (running()) simulation.step(dt);
   orbit.update();
+  if (running()) simulation.step(dt);
   render();
   controls?.frame();
 });

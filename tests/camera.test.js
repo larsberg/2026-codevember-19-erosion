@@ -2,8 +2,28 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { applyCameraView, captureCameraView } from '../src/camera.js';
+import { applyCameraView, captureCameraView, strikePan } from '../src/camera.js';
 import { validateSetup } from '../src/settings.js';
+
+test('strike panning follows camera left and right at each orbit and zoom', () => {
+  const camera = new PerspectiveCamera(42, 1.6, .1, 900);
+  const center = new Vector3(2, -1, 3), normal = new Vector3(1, 0, 0);
+  for (const distance of [3, 600]) {
+    camera.position.copy(center).z += distance;
+    camera.lookAt(center);
+    assert.equal(strikePan(camera, center, normal, .5), 1);
+    assert.equal(strikePan(camera, center, new Vector3(0, 0, 1), .5), .5);
+    camera.position.copy(center).z -= distance;
+    camera.lookAt(center);
+    assert.ok(strikePan(camera, center, normal, .5) < 1e-10);
+  }
+  camera.position.copy(center).add(new Vector3(3, 3, 4));
+  camera.lookAt(center);
+  assert.ok(Math.abs(strikePan(camera, center, normal, 2) - .9) < 1e-10);
+  camera.position.set(12, -1, 8);
+  camera.lookAt(12, -1, 3);
+  assert.equal(strikePan(camera, center, normal, .5), 0);
+});
 
 test('camera limits clamp the live orbit and survive view capture and reload', () => {
   const camera = new PerspectiveCamera(42, 1, .1, 900);

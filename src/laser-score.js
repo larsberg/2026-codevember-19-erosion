@@ -90,7 +90,7 @@ export function createLaserScore({ load = () => import('@strudel/web'), resume =
       echo ??= makeEcho(api, context, sound);
       const note = height < -.30 ? 31 : height > .42 ? 36 : 33;  // G1, C2, A1
       const voice = {
-        s: 'erosion_bass', orbit: bassOrbit, note: note + sound.transpose, cut: 1, pan: .12 + .76 * pan, gain: sound.volume * .9,
+        s: 'erosion_bass', orbit: bassOrbit, note: note + sound.transpose, cut: 1, pan, gain: sound.volume * .9,
         attack: sound.attackMs / 1000, release: sound.releaseMs / 1000,
         cutoff: sound.cutoffHz * (1 + height * 2 / 9),
       };

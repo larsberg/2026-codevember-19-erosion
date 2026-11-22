@@ -18,7 +18,7 @@
   },
   "laser": {
     "color": "#ffe438",
-    "frequency": 1.05
+    "frequency": 1.5
   },
   "drafting": {
     "darkMode": false,
@@ -33,12 +33,12 @@
     "sliceThickness": 6
   },
   "darkPalette": {
-    "cyan": "#00e4f2",
-    "magenta": "#fb25cc",
-    "yellow": "#fff02a",
-    "white": "#f6faff",
+    "cyan": "#00ffee",
+    "magenta": "#fb238b",
+    "yellow": "#393163",
+    "white": "#2b383b",
     "background": "#0b1119",
-    "floor": "#141d28",
+    "floor": "#002047",
     "grid": "#899fb0",
     "axes": "#c4d6e6",
     "projection": "#a8b7c1",
@@ -73,8 +73,8 @@
     "echoLevel": 0.17,
     "echoTimeMs": 250,
     "echoFeedback": 0.32,
-    "sandLevel": 0.1,
-    "sandCutoffHz": 505,
+    "sandLevel": 0.02,
+    "sandCutoffHz": 1810,
     "sandTexture": 30,
     "sandDelayMs": 755,
     "sandRiseMs": 1475,
@@ -84,8 +84,8 @@
     "fps": false
   },
   "camera": {
-    "yaw": 175.3014664646,
-    "elevation": 8.564501156,
+    "yaw": -98.6679751499,
+    "elevation": 18.7374548881,
     "distance": 5.6262560202,
     "minDistance": 1,
     "maxDistance": 600,

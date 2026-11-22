@@ -38,7 +38,7 @@ test('each automatic and manual laser strike triggers one bass note while playin
     setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
   const node = { connect: target => target, disconnect() {} }, gains = [];
   const delay = { ...node, delayTime: param() };
-  const returns = [], modulators = [], filters = [];
+  const returns = [], modulators = [], filters = [], sandPans = [];
   const ctx = {
     state: 'running', currentTime: 2, close: async () => {},
     createDelay: () => delay,
@@ -48,7 +48,10 @@ test('each automatic and manual laser strike triggers one bass note while playin
     },
     createGain() { const gain = param(); gains.push(gain); return { ...node, gain }; },
     createBuffer: (channels, frames, rate) => ({ duration: frames / rate, getChannelData: () => new Float32Array(frames) }),
-    createStereoPanner: () => ({ ...node, pan: param() }),
+    createStereoPanner() {
+      const pan = param(); sandPans.push(pan);
+      return { ...node, pan };
+    },
     createBufferSource() {
       return { ...node, start(time, offset, duration) {
         if (duration == null) modulators.push(this);
@@ -78,7 +81,8 @@ test('each automatic and manual laser strike triggers one bass note while playin
   assert.equal(modulators.length, 1);
   assert.equal(echoOrbits.length, 1);
   assert.ok(calls.every(c => c.voice.s === 'erosion_bass' && c.voice.orbit === echoOrbits[0]));
-  assert.ok(calls[0].voice.pan < .15 && calls[2].voice.pan > .85);
+  assert.deepEqual(calls.map(c => c.voice.pan), [0, .5, 1, .5]);
+  assert.deepEqual(sandPans.map(p => p.value), [-1, 0, 1, 0]);
   assert.ok(calls[0].when > 2);
   const [feedback, wet, sandGain] = gains;
   assert.equal(sandGain.value, setup.volume * setup.sandLevel);

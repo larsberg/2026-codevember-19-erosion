@@ -44,7 +44,7 @@ export function createFallingSand(context, destination, settings) {
       const crest = start + settings.sandRiseMs / 1000, end = crest + settings.sandDecayMs / 1000;
       const source = context.createBufferSource(), envelope = context.createGain(), stereo = context.createStereoPanner();
       source.buffer = noise; source.loop = true;
-      stereo.pan.value = (pan - .5) * 1.2;
+      stereo.pan.value = 2 * pan - 1;
       envelope.gain.setValueAtTime(0, start);
       envelope.gain.linearRampToValueAtTime(1, crest);
       envelope.gain.exponentialRampToValueAtTime(.001, end);
