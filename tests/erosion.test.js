@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createErosion } from '../src/erosion.js';
@@ -234,9 +235,17 @@ test('live physics and laser controls survive a rebuild and accept older saves',
       assert.equal(beam.visible, false);
       tick(120);
       assert.equal(shots, 1);
+      const aim = new Vector3(.6, 0, .8);
+      sketch.aim(aim, new Vector3(0, 0, 1));
+      tick(2);
+      assert.equal(shots, 2);
+      assert.deepEqual(physics.laserAxis.value.toArray(), aim.toArray());
+      assert.ok(physics.firing.value && beam.visible);
+      tick(120);
+      assert.equal(shots, 2);
       sketch.configure(setup);
       tick(60);
-      assert.equal(shots, 3);
+      assert.equal(shots, 4);
       sketch.configure(defaults);
       assert.equal(plan.geometry.drawRange.count, GRAIN_COUNT);
       assert.equal(plan.material.uniforms.pointSize.value, 1);

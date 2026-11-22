@@ -35,7 +35,17 @@ export const fields = {
   studio: { background: ['Background', '#eee9df'], exposure: ['Exposure', .9, .1, 3, .01], shadowOpacity: ['Ground shadow opacity', .32, 0, 1, .01] },
   bloom: { enabled: ['Enable bloom', false], strength: ['Bloom strength', .85, 0, 4, .05], radius: ['Bloom radius', .45, 0, 1, .01], threshold: ['Bloom threshold', 1.4, 0, 3, .01] },
   focus: { enabled: ['Tilt blur', false], tilt: ['Sharp band angle °', 0, -85, 85, 1], band: ['Sharp band half-width', .18, .02, .5, .01], strength: ['Blur amount', 1.5, 0, 8, .1], offset: ['Band vertical offset', 0, -.5, .5, .01] },
-  audio: { enabled: ['Sound', false], volume: ['Volume', .3, 0, 1, .01] },
+  audio: {
+    enabled: ['Sound', true], volume: ['Volume', .3, 0, 1, .01],
+    transpose: ['Pitch (semitones)', 0, -12, 12, 1],
+    attackMs: ['Attack (ms)', 2, 1, 150, 1],
+    lengthMs: ['Strike length (ms)', 840, 20, 1200, 1],
+    releaseMs: ['Release (ms)', 140, 10, 600, 1],
+    cutoffHz: ['Tone cutoff (Hz)', 360, 50, 1500, 5],
+    echoLevel: ['Echo level', .14, 0, 1, .01],
+    echoTimeMs: ['Echo time (ms)', 290, 40, 950, 5],
+    echoFeedback: ['Echo feedback', .18, 0, .85, .01],
+  },
   visibility: { fps: ['Show frame-rate meter', false] },
   camera: {
     yaw: ['Yaw', DEFAULT_CAMERA.yaw, -360, 360, .1], elevation: ['Elevation', DEFAULT_CAMERA.elevation, -85, 85, .1],
@@ -80,8 +90,6 @@ export function validateSetup(value) {
   if (value.drafting?.planOpacity == null && value.studio?.shadowOpacity != null) {
     result.drafting.planOpacity = result.studio.shadowOpacity * .4;
   }
-  // Older setups may have enabled the retired grain-position playback.
-  result.audio.enabled = false;
   const camera = result.camera;
   if (camera.minDistance > camera.maxDistance) throw Error('Minimum camera distance exceeds maximum distance.');
   camera.distance = Math.min(camera.maxDistance, Math.max(camera.minDistance, camera.distance));

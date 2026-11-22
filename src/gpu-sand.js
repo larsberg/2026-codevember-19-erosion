@@ -14,7 +14,7 @@ function dataTexture(data) {
   return tex;
 }
 
-export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorGap) {
+export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorGap, onStrike) {
   if (!renderer.extensions.has('EXT_color_buffer_float') && !renderer.extensions.has('EXT_color_buffer_half_float')) {
     throw new Error('Erosion needs WebGL 2 with floating-point render targets.');
   }
@@ -58,6 +58,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
   let next = 0;
   return {
     positions: uniforms.positions, previousPositions, interpolation: { value: 0 }, floorY: uniforms.floorY,
+    aim: laser.aim, clearAim: laser.clearAim,
     beam: laser.beam,
     heat: laser.heat,
     grainRadius(id) { return GRAIN_RADIUS + GRAIN_RADIUS_SPREAD * initial.velocities[4 * id + 3]; },
@@ -71,13 +72,15 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
     step(dt, center) {
       uniforms.dt.value = dt;
       uniforms.center.value.copy(center);
-      const target = renderer.getRenderTarget(), auto = renderer.autoClear;
+      const target = renderer.getRenderTarget(), auto = renderer.autoClear, sort = renderer.sortObjects;
       const alpha = renderer.getClearAlpha();
       renderer.getClearColor(originalColor);
       try {
+        // Each pass draws one object. Its position attribute contains IDs or clip-space XY.
+        renderer.sortObjects = false;
         renderer.autoClear = false;
         renderer.setClearColor(0, 0);
-        uniforms.firing.value = laser.step(dt, center, renderer, camera);
+        uniforms.firing.value = laser.step(dt, center, renderer, camera, onStrike);
         renderer.setRenderTarget(contacts);
         renderer.clear(true, false, false);
         renderer.render(scatter, camera);
@@ -88,7 +91,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
         uniforms.positions.value = out.textures[0]; uniforms.velocities.value = out.textures[1];
         next = 1-next;
       } finally {
-        renderer.setRenderTarget(target); renderer.setClearColor(originalColor, alpha); renderer.autoClear = auto;
+        renderer.setRenderTarget(target); renderer.setClearColor(originalColor, alpha); renderer.autoClear = auto; renderer.sortObjects = sort;
       }
     },
     dispose() {

@@ -1,6 +1,6 @@
 import {
   BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, MeshNormalMaterial, MeshStandardMaterial,
-  Points, Quaternion, ShaderMaterial, Vector3,
+  Points, Quaternion, ShaderMaterial, Sphere, Vector3,
 } from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
@@ -149,6 +149,8 @@ export function createGrains(gpu, seed) {
 
   // Project the simulated grain positions onto the ground.
   const dots = new BufferGeometry();
+  // Positions live in a texture. Three uses this center to sort the transparent plan.
+  dots.boundingSphere = new Sphere(new Vector3(), Infinity);
   // An odd stride visits every texel in the power-of-two state texture once.
   // Shorter draw ranges sample all six minerals with stable grain IDs.
   const plotIds = Uint16Array.from({ length: GRAIN_COUNT }, (_, i) => (i * 40503) % GRAIN_COUNT);
@@ -184,6 +186,7 @@ export function createGrains(gpu, seed) {
     configure(drafting) {
       const count = Math.round(GRAIN_COUNT * drafting.samplePercent / 100);
       dots.setDrawRange(0, count);
+      dots.boundingSphere.center.y = gpu.floorY.value;
       plan.visible = drafting.planOpacity > 0 && count > 0;
       const { opacity, ink, pointSize, sliceHeight, halfThickness } = projectionMaterial.uniforms;
       opacity.value = drafting.planOpacity;

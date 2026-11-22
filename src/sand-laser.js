@@ -10,11 +10,13 @@ import { precision } from './sand-shaders.js';
 const flashDuration = .18;
 const sourceDistance = 5;
 const coolingTime = .8;
-const heatSlots = Math.ceil(coolingTime * fields.laser.frequency[3]);
+const heatSlots = Math.ceil(coolingTime * fields.laser.frequency[3]) + 3;
 
 export function createSandLaser(seed, positions, grainIds, sphereRadius = { value: CORE_RADIUS }) {
   const random = randomSource((seed ^ 0x2ac817) >>> 0);
   const axis = { value: new Vector3() }, source = { value: new Vector3() };
+  const probeSource = { value: new Vector3() }, probeAxis = { value: new Vector3() };
+  const reach = { value: sourceDistance }, pending = [];
   // Each live spot keeps its own GPU hit until it has cooled, even at the highest pulse rate.
   const target = new WebGLRenderTarget(1, heatSlots, {
     type: HalfFloatType, minFilter: NearestFilter, magFilter: NearestFilter, depthBuffer: true,
@@ -26,10 +28,11 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
   let nextRow = 0;
   // A one-pixel depth test selects the first grain along the beam, entirely on the GPU.
   const search = new Points(new BufferGeometry(), new RawShaderMaterial({
-    glslVersion: GLSL3, uniforms: { positions, axis, source }, blending: NoBlending,
+    glslVersion: GLSL3, uniforms: { positions, axis: probeAxis, source: probeSource, reach }, blending: NoBlending,
     vertexShader: precision + `in float position;
       uniform sampler2D positions;
       uniform vec3 source, axis;
+      uniform float reach;
       out vec3 grain;
       void main() {
         int id = int(position);
@@ -38,7 +41,7 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
         float depth = -dot(offset, axis);
         vec3 side = offset + depth * axis;
         const float range = ${sourceDistance.toFixed(1)};
-        bool inBeam = depth > 0. && depth < range && dot(side, side) < .065 * .065;
+        bool inBeam = depth > 0. && depth < reach && dot(side, side) < .065 * .065;
         gl_Position = inBeam ? vec4(0., 0., 2. * depth / range - 1., 1.) : vec4(3., 3., 0., 1.);
         gl_PointSize = 1.;
       }`,
@@ -76,31 +79,48 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
   let remainingFlash = 0;
   return {
     beam, axis, impactPoint, impactRow,
+    aim(normal, sight) { pending.push({ normal: normal.clone(), sight: sight.clone() }); },
+    clearAim() { pending.length = 0; },
     heat: { impactPoint, spots, sphereCenter, sphereRadius },
     configure(settings) {
       beamColor.value.set(settings.color);
+      const wasAutomatic = frequency > 0;
       frequency = settings.frequency;
-      if (frequency === 0) {
+      if (wasAutomatic && frequency === 0) {
         phase = 0;
         remainingFlash = 0;
         brightness.value = 0;
         beam.visible = false;
       }
     },
-    step(dt, center, renderer, camera) {
+    step(dt, center, renderer, camera, onStrike) {
       for (const spot of spots.value) spot.w = Math.max(0, spot.w - dt / coolingTime);
       phase += dt * frequency;
       remainingFlash = Math.max(0, remainingFlash - dt);
-      const fire = phase >= 1 - 1e-8;
+      const aimed = pending.shift();
+      const automatic = phase >= 1 - 1e-8;
+      const fire = !!aimed || automatic;
       if (fire) {
-        // Uniform height and azimuth give each equal-area patch the same chance of a hit.
-        const y = 2 * random() - 1;
-        const azimuth = 2 * Math.PI * random();
-        const horizontal = Math.sqrt(1 - y*y);
-        axis.value.set(horizontal * Math.sin(azimuth), y, horizontal * Math.cos(azimuth));
+        if (aimed) {
+          axis.value.copy(aimed.normal);
+          probeAxis.value.copy(aimed.sight);
+        } else {
+          const y = 2 * random() - 1;
+          const azimuth = 2 * Math.PI * random();
+          const horizontal = Math.sqrt(1 - y*y);
+          axis.value.set(horizontal * Math.sin(azimuth), y, horizontal * Math.cos(azimuth));
+          probeAxis.value.copy(axis.value);
+          phase -= 1;
+        }
         source.value.copy(center).addScaledVector(axis.value, sourceDistance);
+        // Search from the viewer through the picked surface pixel. Draw and eject along
+        // the surface normal so an aimed beam stays legible even at oblique angles.
+        reach.value = aimed ? sourceDistance : sourceDistance - sphereRadius.value;
+        probeSource.value.copy(center).addScaledVector(axis.value, sphereRadius.value).addScaledVector(probeAxis.value, reach.value);
         sphereCenter.value.copy(center);
-        spots.value[nextRow].set(axis.value.x, axis.value.y, axis.value.z, 1);
+        // A doubled normal marks an explicit surface pick for the heat shader.
+        const mark = aimed ? 2 : 1;
+        spots.value[nextRow].set(mark * axis.value.x, mark * axis.value.y, mark * axis.value.z, 1);
         impactRow.value = nextRow;
         target.viewport.set(0, nextRow, 1, 1);
         target.scissor.copy(target.viewport);
@@ -108,8 +128,9 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
         renderer.setRenderTarget(target);
         renderer.clear(true, true, false);
         renderer.render(search, camera);
-        phase = Math.max(0, phase - 1);
+        phase = Math.max(0, Math.min(phase, 1));
         remainingFlash = flashDuration;
+        onStrike?.(axis.value, center, sphereRadius.value, !!aimed);
       }
       beam.visible = remainingFlash > 0;
       brightness.value = remainingFlash / flashDuration;

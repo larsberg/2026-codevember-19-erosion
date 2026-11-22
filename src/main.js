@@ -10,6 +10,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { applyCameraView, captureCameraView, configureOrbitInputs } from './camera.js';
 import { initPhysics } from './physics.js';
+import { createLaserScore } from './laser-score.js';
+import { bindSphereAim } from './aim.js';
 import { createErosion } from './erosion.js';
 import { floorHeight } from './erosion-field.js';
 import { createControls } from './controls.js';
@@ -93,11 +95,19 @@ function configureGrid({ gridDivisions, gridOpacity }) {
   grid.visible = gridOpacity > 0;
 }
 
+const score = createLaserScore();
+const strikePoint = new Vector3();
+function playStrike(axis, center, radius, manual) {
+  if (!score.ready) return;
+  const x = strikePoint.copy(center).addScaledVector(axis, radius).project(camera).x;
+  score.hit(axis.y, Math.min(1, Math.max(0, .5 + .5 * x)), manual);
+}
 let simulation;
 function rebuild(next) {
-  const candidate = createErosion(renderer, next);
+  const candidate = createErosion(renderer, next, playStrike);
   candidate.configure(next);
   simulation?.dispose();
+  score.reset();
   simulation = candidate;
   scene.add(simulation.root);
 }
@@ -106,7 +116,16 @@ let controls, lightingControls, materialControls;
 const lights = { directional: light, hemisphere, spotlight, fill };
 const running = () => settings.motion.playing && !document.hidden;
 
+const detachAim = bindSphereAim(canvas, camera, sphere => simulation.getSphere(sphere), (normal, sight) => {
+  if (running()) simulation.aim(normal, sight);
+});
+function syncSound() {
+  score.configure(settings.audio, running());
+  if (!running()) simulation.clearAim();
+}
+
 function configure(restoreCamera = false) {
+  syncSound();
   simulation.configure(settings);
   floor.position.y = floorHeight(settings.physics.sphereRadius, settings.physics.floorGap);
   configureGrid(settings.drafting);
@@ -148,7 +167,10 @@ function restore(value) {
 function change(group, key, value) {
   const next = { ...settings, [group]: { ...settings[group], [key]: value } };
   settings = validateSetup(next);
-  configure(group === 'camera');
+  if (group === 'audio') {
+    syncSound();
+    controls?.set(settings);
+  } else configure(group === 'camera');
   controls?.status('Unsaved changes');
 }
 
@@ -248,6 +270,7 @@ document.addEventListener('keydown', event => {
   switch (event.code) {
     case 'KeyH': event.preventDefault(); showControls(!uiVisible); break;
     case 'Escape': controls?.close(); break;
+    case 'KeyM': event.preventDefault(); change('audio', 'enabled', !settings.audio.enabled); break;
     case 'KeyP': event.preventDefault(); actions.togglePlaying(); break;
   }
 });
@@ -276,11 +299,12 @@ renderer.setAnimationLoop(now => {
 });
 document.addEventListener('visibilitychange', () => {
   previousTime = undefined;
+  syncSound();
 });
 
 const sketch = {
   getSetup: () => structuredClone(settings),
-  getState: () => ({ playing: settings.motion.playing, physics: 'Box3D', ...simulation.state, audio: { enabled: false, running: false } }),
+  getState: () => ({ playing: settings.motion.playing, physics: 'Box3D', ...simulation.state, audio: score.state }),
   setup(value) { restore(value); return sketch.getSetup(); },
   play() { if (!settings.motion.playing) actions.togglePlaying(); },
   pause() { if (settings.motion.playing) actions.togglePlaying(); },
@@ -291,6 +315,8 @@ const detachPlayer = attachPlayerBridge(sketch);
 window.addEventListener('pagehide', () => {
   renderer.setAnimationLoop(null);
   detachPlayer();
+  detachAim();
+  score.dispose();
   simulation.dispose();
   orbit.dispose();
   effects.dispose();

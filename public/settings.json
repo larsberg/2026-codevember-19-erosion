@@ -18,7 +18,7 @@
   },
   "laser": {
     "color": "#ffe438",
-    "frequency": 2.51
+    "frequency": 2.3
   },
   "drafting": {
     "gridOpacity": 0.48,
@@ -28,8 +28,8 @@
     "pointSize": 1,
     "samplePercent": 100,
     "slice": false,
-    "sliceHeight": 1.82,
-    "sliceThickness": 0.02
+    "sliceHeight": 12,
+    "sliceThickness": 6
   },
   "studio": {
     "background": "#eee9df",
@@ -50,16 +50,24 @@
     "offset": 0
   },
   "audio": {
-    "enabled": false,
-    "volume": 0.3
+    "enabled": true,
+    "volume": 0.3,
+    "transpose": 0,
+    "attackMs": 2,
+    "lengthMs": 840,
+    "releaseMs": 140,
+    "cutoffHz": 360,
+    "echoLevel": 0.17,
+    "echoTimeMs": 250,
+    "echoFeedback": 0.32
   },
   "visibility": {
-    "fps": true
+    "fps": false
   },
   "camera": {
-    "yaw": 110.6166673786,
-    "elevation": 17.5928401287,
-    "distance": 6.7403415706,
+    "yaw": -126.2736309073,
+    "elevation": 19.4104554658,
+    "distance": 5.6262560202,
     "minDistance": 1,
     "maxDistance": 600,
     "offsetX": 0,

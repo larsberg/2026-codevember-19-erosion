@@ -23,8 +23,10 @@ test('atomic GET/PUT round trip uses Erosion ownership and retains the complete 
   setup.laser = { color: '#44aaff', frequency: 1.5 };
   setup.materials.panels.roughness=.13;setup.audio.enabled=false;setup.lighting.environment.intensity=1.8;
   Object.assign(setup.lighting.spotlight,{penumbra:.9,softness:7.5,intensity:11200});
-  const older=await request('PUT',{...setup,audio:{enabled:true,volume:.2}});
-  assert.deepEqual(older.body.audio,{enabled:false,volume:.2});
+  const audible=await request('PUT',{...setup,audio:{enabled:true,volume:.2}});
+  assert.deepEqual(audible.body.audio,{...defaultSetup().audio,enabled:true,volume:.2});
+  Object.assign(setup.audio, { transpose: 5, attackMs: 60, lengthMs: 150, releaseMs: 230,
+    cutoffHz: 650, echoLevel: .29, echoTimeMs: 470, echoFeedback: .54 });
   assert.equal((await request('PUT',setup,'01-fold')).status,409);
   assert.equal((await request('PUT',setup)).status,200);
   const saved=await request('GET');assert.equal(saved.headers['X-Sketch-Id'],'19-erosion');assert.deepEqual(saved.body,setup);

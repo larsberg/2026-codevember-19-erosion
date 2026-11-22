@@ -13,7 +13,7 @@ function field(group,key){const [label,initial,min,max,step]=fields[group][key],
   return `<label class="slider-label" for="${id}">${label}<output></output></label><input id="${id}" ${data} type="range" min="${min}" max="${max}" step="${step}">`;
 }
 export function createControls({settings,change,save,reload,resetView,exportDrawing,togglePlaying,reset,regenerate,selectPalette,changeLibrary}) {
-  const shell=document.querySelector('.sketch'),tabs=['Mesh','Motion','Physics','Drafting','Palettes','Materials','Lighting','Camera','Info'];
+  const shell=document.querySelector('.sketch'),tabs=['Mesh','Motion','Physics','Drafting','Palettes','Audio','Materials','Lighting','Camera','Info'];
   const group=(g,keys=Object.keys(fields[g]))=>keys.map(k=>field(g,k)).join('');
   const saveLabel=import.meta.env?.PROD?'Save on this device':'Save settings';
   shell.insertAdjacentHTML('beforeend',`
@@ -33,13 +33,22 @@ export function createControls({settings,change,save,reload,resetView,exportDraw
         <section id="panel-physics" role="tabpanel" aria-labelledby="tab-physics" hidden>${group('physics')}<p class="control-heading">Laser</p>${group('laser')}</section>
         <section id="panel-drafting" role="tabpanel" aria-labelledby="tab-drafting" hidden>${group('drafting')}</section>
         <section id="panel-palettes" role="tabpanel" aria-labelledby="tab-palettes" hidden>${paletteWorkshopMarkup()}</section>
+        <section id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+          <div class="audio-toolbar"><button type="button" class="audio-start">Enable sounds</button><button type="button" class="audio-stop">Mute sounds</button></div>
+          <p class="audio-status" role="status"></p>${group('audio',['volume'])}
+          <p class="control-heading">Bass strike</p>${group('audio',['transpose','attackMs','lengthMs','releaseMs','cutoffHz'])}
+          <p class="control-heading">Echo</p>${group('audio',['echoLevel','echoTimeMs','echoFeedback'])}
+        </section>
         <section id="panel-materials" role="tabpanel" aria-labelledby="tab-materials" hidden>${materialControlsMarkup()}</section>
         <section id="panel-lighting" role="tabpanel" aria-labelledby="tab-lighting" hidden><p class="control-heading">Studio</p>${group('studio')}${lightingControlsMarkup()}<details class="material-group"><summary>Bloom</summary>${group('bloom')}</details></section>
         <section id="panel-camera" role="tabpanel" aria-labelledby="tab-camera" hidden><div class="camera-controls">${group('camera')}</div><button class="reset-camera">Reset view</button><details class="material-group"><summary>Tilt blur</summary>${group('focus')}</details></section>
-        <section id="panel-info" role="tabpanel" aria-labelledby="tab-info" hidden><p class="camera-hint">Left-drag to orbit. Right-drag to pan. Scroll to zoom.</p><p class="camera-hint">P pause · H controls</p></section>
+        <section id="panel-info" role="tabpanel" aria-labelledby="tab-info" hidden><p class="camera-hint">Left-drag to orbit. Right-drag to pan. Scroll to zoom.</p><p class="camera-hint">P pause · H controls · M sound</p></section>
       </fieldset></div>
     </aside>`);
   const query=s=>shell.querySelector(s),drawer=query('.control-panel'),toggle=query('.drawer-toggle');
+  const enableSound = query('.audio-start'), muteSound = query('.audio-stop'), audioStatus = query('.audio-status');
+  enableSound.addEventListener('click', () => change('audio', 'enabled', true));
+  muteSound.addEventListener('click', () => change('audio', 'enabled', false));
   let ui=false,current=settings,stats;
   function showControls(enabled){
     ui=enabled;
@@ -80,6 +89,10 @@ export function createControls({settings,change,save,reload,resetView,exportDraw
     stats?.update();
   },set(value){
     current=value;
+    enableSound.disabled = value.audio.enabled;
+    muteSound.disabled = !value.audio.enabled;
+    const soundStatus = value.audio.enabled ? 'Sound enabled' : 'Sound muted';
+    if (audioStatus.textContent !== soundStatus) audioStatus.textContent = soundStatus;
     for(const input of shell.querySelectorAll('[data-group]'))syncInput(input);
     const run=query('.run'),label=value.motion.playing?'Pause':'Play';
     if(run.getAttribute('aria-label')!==label){run.innerHTML=icon(value.motion.playing?paths.pause:paths.play);run.setAttribute('aria-label',label);}

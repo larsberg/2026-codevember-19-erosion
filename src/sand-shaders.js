@@ -131,7 +131,10 @@ void main() {
   p.y = max(p.y, floorContact);
   vec3 outward = p.xyz / max(length(p.xyz), .0001);
   vec4 impact = vec4(0.);
-  if (firing) impact = texelFetch(impactPoint, ivec2(0, impactRow), 0);
+  if (firing) {
+    impact = texelFetch(impactPoint, ivec2(0, impactRow), 0);
+    if (impact.w < .5) impact = vec4(center + radius * laserAxis, 1.);
+  }
   if (impact.w > .5) {
     vec3 lateral;
     float weight = craterWeight(p.xyz - impact.xyz, lateral);

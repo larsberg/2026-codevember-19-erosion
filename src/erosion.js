@@ -5,10 +5,10 @@ import { createGpuSand } from './gpu-sand.js';
 import { createGrains } from './grains.js';
 import { createBall } from './mirror.js';
 
-export function createErosion(renderer, settings) {
+export function createErosion(renderer, settings, onStrike) {
   const seed = settings.generation.seed, root = new Group();
   let radius = settings.physics.sphereRadius ?? CORE_RADIUS;
-  const gpu = createGpuSand(renderer, seed, radius, settings.physics.floorGap), grains = createGrains(gpu,seed);
+  const gpu = createGpuSand(renderer, seed, radius, settings.physics.floorGap, onStrike), grains = createGrains(gpu,seed);
   const ball = createBall(radius, gpu.heat);
   root.add(grains.root, grains.plan, ball, gpu.beam);
   const physics = createPhysics({ gravity: 0, friction: settings.physics.friction });
@@ -23,7 +23,8 @@ export function createErosion(renderer, settings) {
   gpu.configure(settings.physics, settings.laser);
   grains.configure(settings.drafting);
   return {
-    root,
+    root, aim: gpu.aim, clearAim: gpu.clearAim,
+    getSphere(target) { return target.set(center, radius); },
     get state() { return { time, seed, grains: GRAIN_COUNT, hulls: grains.hullCount, center: ball.position.toArray() }; },
     configure(value) {
       const nextRadius = value.physics.sphereRadius ?? CORE_RADIUS;
