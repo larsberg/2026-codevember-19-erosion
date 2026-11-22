@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { RedFormat, UnsignedByteType, Vector3 } from 'three';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createErosion } from '../src/erosion.js';
@@ -41,7 +41,7 @@ test('one seed fills the volume around the ball with a fixed population of resti
 
 test('the fixed Box3D sphere supplies the collision center while one indexed batch renders all six minerals', async () => {
   await initPhysics();
-  let target = null, passes = 0, lastGrainTexture, hitTexture, hitRow;
+  let target = null, passes = 0, lastGrainTexture, lastHeatTexture, hitTexture, hitRow;
   const shots = [], impulses = [];
   const renderer = {
     extensions: { has: () => true }, autoClear: true,
@@ -65,7 +65,12 @@ test('the fixed Box3D sphere supplies the collision center while one indexed bat
         assert.equal(object.geometry.attributes.position.count, GRAIN_COUNT);
         assert.equal(object.geometry.instanceCount, 2);
       } else {
-        assert.ok(object.isMesh && target.textures.length === 2);
+        assert.ok(object.isMesh && target.textures.length === 3);
+        assert.equal(target.textures[2].format, RedFormat);
+        assert.equal(target.textures[2].type, UnsignedByteType);
+        assert.equal(object.material.uniforms.grainHeat.value, lastHeatTexture);
+        assert.notEqual(lastHeatTexture, target.textures[2]);
+        lastHeatTexture = target.textures[2];
         assert.ok(object.material.uniforms.center.value.distanceTo(core.position) < 1e-6);
         assert.equal(object.material.uniforms.radius.value, core.geometry.parameters.radius * core.scale.x);
         if (object.material.uniforms.firing.value) {
@@ -92,6 +97,8 @@ test('the fixed Box3D sphere supplies the collision center while one indexed bat
     assert.equal(new Set([...ranges.values()].map(([, roughness]) => roughness)).size, 6);
     const shader = { uniforms: {}, vertexShader: '', fragmentShader: '' };
     grains.material.onBeforeCompile(shader);
+    lastHeatTexture = shader.uniforms.grainHeat.value;
+    assert.deepEqual(lastHeatTexture.image.data, new Uint8Array(GRAIN_COUNT));
     const normalMaterial = grains.userData.aoNormalMaterial;
     assert.ok(grains.layers.isEnabled(1));
     assert.ok(normalMaterial.isMeshNormalMaterial && normalMaterial.flatShading);
@@ -126,6 +133,7 @@ test('the fixed Box3D sphere supplies the collision center while one indexed bat
     assert.deepEqual(sketch.state.center, start);
     assert.equal(renderer.getRenderTarget(),null);
     assert.equal(shader.uniforms.grainPositions.value, lastGrainTexture);
+    assert.equal(shader.uniforms.grainHeat.value, lastHeatTexture);
     assert.notEqual(shader.uniforms.previousPositions.value, lastGrainTexture);
     sketch.step(1 / 120);
     assert.ok(Math.abs(shader.uniforms.interpolation.value - 1 / 3) < 1e-6);

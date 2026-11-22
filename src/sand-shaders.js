@@ -1,5 +1,10 @@
 import { GRAIN_RADIUS, GRAIN_RADIUS_SPREAD, SIDE } from './erosion-field.js';
 
+export const coolingTime = .8; // seconds for a full-strength laser hit to cool
+export const laserEmission = `vec3 laserEmission(float warmth) {
+  return warmth * mix(vec3(2.2, .09, .008), vec3(4., 1.6, .3), warmth);
+}`;
+
 export const precision = `precision highp float;
 precision highp int;
 precision highp sampler2D;
@@ -41,7 +46,7 @@ export const screenVertex = `in vec2 position;
 void main() { gl_Position=vec4(position,0.,1.); }`;
 
 export const stepFragment = grid + `
-uniform sampler2D positions, velocities, contacts;
+uniform sampler2D positions, velocities, contacts, grainHeat;
 uniform vec3 center, laserAxis;
 uniform sampler2D impactPoint;
 uniform int impactRow;
@@ -50,6 +55,7 @@ uniform float dt, attraction, friction, radius, damping, restitution, stiffness,
 uniform float rotationScale, floorY;
 layout(location=0) out vec4 nextPosition;
 layout(location=1) out vec4 nextVelocity;
+layout(location=2) out float nextHeat;
 
 const float spinStartSpeed = .12;   // world units per second
 const float spinRate = 1.6;        // radians per second at 1×
@@ -119,6 +125,7 @@ vec3 advanceAboveFloor(vec3 start, inout vec3 velocity, float seconds, float flo
 void main() {
   ivec2 id = ivec2(gl_FragCoord.xy);
   vec4 p = texelFetch(positions, id, 0), v = texelFetch(velocities, id, 0);
+  nextHeat = max(0., texelFetch(grainHeat, id, 0).r - dt / ${coolingTime});
   // Supported grains store their support texel in XY and residual spin in Z.
   // A negative X identifies the sphere. Free grains use XYZ for velocity.
   bool sleeping = v.w > 2.;
@@ -139,6 +146,7 @@ void main() {
     vec3 lateral;
     float weight = craterWeight(p.xyz - impact.xyz, lateral);
     if (weight > 0.) {
+      nextHeat = max(nextHeat, weight);
       sleeping = false;
       previousVelocity += weight * ((5.3 + .7 * variation) * laserAxis + 15. * lateral);
     }

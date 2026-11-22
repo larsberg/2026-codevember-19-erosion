@@ -6,6 +6,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
 import { GRAIN_COUNT, SIDE } from './erosion-field.js';
 import { randomSource } from './random.js';
+import { laserEmission } from './sand-shaders.js';
 
 // A few reusable hulls and distinct mineral finishes keep the draw count independent of grain count.
 const minerals = [
@@ -117,7 +118,8 @@ export function createGrains(gpu, seed) {
       if (id >= (kind + 1) * ${GRAIN_COUNT} / ${minerals.length}) {
         gl_Position = vec4(2., 2., 2., 1.); return;
       }
-      vec4 grain = displayGrain(ivec2(id % ${SIDE}, id / ${SIDE}));
+      ivec2 grainTexel = ivec2(id % ${SIDE}, id / ${SIDE});
+      vec4 grain = displayGrain(grainTexel);
       vec4 rotations[6] = vec4[6](pose0, pose1, pose2, pose3, pose4, pose5);
       vec4 orientQ = rotations[kind];
       vec2 cs = vec2(cos(grain.w), sin(grain.w));`)
@@ -127,13 +129,22 @@ export function createGrains(gpu, seed) {
   const material = new MeshStandardMaterial({ name: 'Mineral grains', flatShading: true, vertexColors: true });
   material.onBeforeCompile = shader => {
     applyGrainPose(shader);
+    shader.uniforms.grainHeat = gpu.grainHeat;
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>
+      uniform sampler2D grainHeat;
+      flat varying float vGrainHeat;
       attribute vec3 shade0, shade1;
       flat varying vec2 finish;`)
       .replace('#include <color_vertex>', `#include <color_vertex>
         vColor.rgb *= kind < 3 ? shade0[kind % 3] : shade1[kind % 3];
+        vGrainHeat = texelFetch(grainHeat, grainTexel, 0).r;
         finish = grainBatch.zw;`);
-    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\n flat varying vec2 finish;')
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
+      flat varying vec2 finish;
+      flat varying float vGrainHeat;
+      ${laserEmission}`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        totalEmissiveRadiance += laserEmission(vGrainHeat * vGrainHeat);`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = finish.x;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = finish.y;');
   };

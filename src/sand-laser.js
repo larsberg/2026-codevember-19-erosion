@@ -5,11 +5,10 @@ import {
 import { CORE_RADIUS, SIDE } from './erosion-field.js';
 import { fields } from './settings.js';
 import { randomSource } from './random.js';
-import { precision } from './sand-shaders.js';
+import { coolingTime, precision } from './sand-shaders.js';
 
 const flashDuration = .18;
 const sourceDistance = 5;
-const coolingTime = .8;
 const heatSlots = Math.ceil(coolingTime * fields.laser.frequency[3]) + 3;
 
 export function createSandLaser(seed, positions, grainIds, sphereRadius = { value: CORE_RADIUS }) {

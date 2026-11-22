@@ -1,5 +1,6 @@
 import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import { CORE_RADIUS } from './erosion-field.js';
+import { laserEmission } from './sand-shaders.js';
 
 export function createBall(radius = CORE_RADIUS, heat) {
   const ball = new Mesh(
@@ -18,6 +19,7 @@ export function createBall(radius = CORE_RADIUS, heat) {
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>
           varying vec3 surfaceDirection;
+          ${laserEmission}
           uniform sampler2D heatHits;
           uniform vec3 sphereCenter;
           uniform float sphereRadius;
@@ -33,8 +35,7 @@ export function createBall(radius = CORE_RADIUS, heat) {
             vec3 direction = hit.w > .5 && dot(aim, aim) < 2. ? normalize(hit.xyz - sphereCenter) : normalize(aim);
             vec3 delta = surface - direction;
             float warmth = life * life * exp(-2. * dot(delta, delta) / (width * width));
-            vec3 ember = mix(vec3(2.2, .09, .008), vec3(4., 1.6, .3), warmth);
-            totalEmissiveRadiance += warmth * ember;
+            totalEmissiveRadiance += laserEmission(warmth);
           }`);
     };
   }

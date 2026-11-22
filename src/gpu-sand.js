@@ -1,7 +1,7 @@
 import {
   BufferAttribute, BufferGeometry, Camera, Color, DataTexture,
   FloatType, GLSL3, HalfFloatType, InstancedBufferGeometry, Mesh, NearestFilter, NoBlending, Points,
-  RawShaderMaterial, RGBAFormat, UnsignedByteType, Vector3, WebGLRenderTarget,
+  RawShaderMaterial, RedFormat, RGBAFormat, UnsignedByteType, Vector3, WebGLRenderTarget,
 } from 'three';
 import { CORE_RADIUS, floorHeight, GRAIN_COUNT, GRAIN_RADIUS, GRAIN_RADIUS_SPREAD, seedSand, SIDE } from './erosion-field.js';
 import { atlasWidth, atlasHeight, precision, scatterFragment, scatterVertex, screenVertex, stepFragment } from './sand-shaders.js';
@@ -20,9 +20,16 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
   }
   const initial = seedSand(seed, sphereRadius, floorGap);
   const start = dataTexture(initial.positions), speed = dataTexture(initial.velocities);
+  const cold = new DataTexture(new Uint8Array(GRAIN_COUNT), SIDE, SIDE, RedFormat, UnsignedByteType);
+  cold.needsUpdate = true;
   const options = { type: HalfFloatType, depthBuffer: false, minFilter: NearestFilter, magFilter: NearestFilter, generateMipmaps: false };
   const contacts = new WebGLRenderTarget(atlasWidth, atlasHeight, { ...options, type: UnsignedByteType });
-  const states = [0,1].map(() => new WebGLRenderTarget(SIDE, SIDE, { ...options, count: 2 }));
+  const states = [0,1].map(() => {
+    const state = new WebGLRenderTarget(SIDE, SIDE, { ...options, count: 3 });
+    state.textures[2].format = RedFormat;
+    state.textures[2].type = UnsignedByteType;
+    return state;
+  });
   const physicsUniforms = Object.fromEntries(Object.entries(fields.physics).map(([key, [, initial]]) =>
     [key, { value: initial }]));
   // Older saves call the strength of attraction toward the origin "gravity".
@@ -31,6 +38,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
   const uniforms = {
     ...grainUniforms, attraction,
     positions: { value: start }, velocities: { value: speed }, contacts: { value: contacts.texture },
+    grainHeat: { value: cold },
     center: { value: new Vector3() },
     dt: { value: 0 }, radius, floorY: { value: floorHeight(sphereRadius, floorGap) },
   };
@@ -58,6 +66,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
   let next = 0;
   return {
     positions: uniforms.positions, previousPositions, interpolation: { value: 0 }, floorY: uniforms.floorY,
+    grainHeat: uniforms.grainHeat,
     aim: laser.aim, clearAim: laser.clearAim,
     beam: laser.beam,
     heat: laser.heat,
@@ -89,6 +98,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
         renderer.render(screen, camera);
         previousPositions.value = uniforms.positions.value;
         uniforms.positions.value = out.textures[0]; uniforms.velocities.value = out.textures[1];
+        uniforms.grainHeat.value = out.textures[2];
         next = 1-next;
       } finally {
         renderer.setRenderTarget(target); renderer.setClearColor(originalColor, alpha); renderer.autoClear = auto; renderer.sortObjects = sort;
@@ -96,7 +106,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
     },
     dispose() {
       laser.dispose();
-      for (const item of [start, speed, contacts, ...states, scatter.geometry, scatter.material, screen.geometry, screen.material]) item.dispose();
+      for (const item of [start, speed, cold, contacts, ...states, scatter.geometry, scatter.material, screen.geometry, screen.material]) item.dispose();
     },
   };
 }

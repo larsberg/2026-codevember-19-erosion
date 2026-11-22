@@ -51,7 +51,7 @@
   },
   "audio": {
     "enabled": true,
-    "volume": 0.3,
+    "volume": 1,
     "transpose": 0,
     "attackMs": 2,
     "lengthMs": 840,
@@ -65,8 +65,8 @@
     "fps": false
   },
   "camera": {
-    "yaw": -126.2736309073,
-    "elevation": 19.4104554658,
+    "yaw": -152.9937212182,
+    "elevation": 20.3125480394,
     "distance": 5.6262560202,
     "minDistance": 1,
     "maxDistance": 600,
