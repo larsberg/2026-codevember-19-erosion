@@ -1,0 +1,30 @@
+{
+  "id": "2026-codevember-19-erosion",
+  "title": "Erosion",
+  "slug": "2026-codevember-19-erosion",
+  "aliases": [],
+  "hidden": true,
+  "date": "2026-11-21",
+  "datePrecision": "day",
+  "thumbnail": {
+    "src": "https://larsberg.github.io/2026-codevember-19-erosion/thumbnail.jpg",
+    "width": 1138,
+    "height": 1040,
+    "alt": "Faceted sand grains scatter from a spherical pile above a drafting grid."
+  },
+  "runtimeUrl": "https://larsberg.github.io/2026-codevember-19-erosion/?embed=1",
+  "standaloneUrl": "https://larsberg.github.io/2026-codevember-19-erosion/",
+  "iframeAllow": "autoplay; fullscreen",
+  "madeWith": [
+    "threejs",
+    "box3d",
+    "strudel",
+    "web-audio"
+  ],
+  "sidebarPattern": "waves",
+  "sidebarTone": "dark",
+  "sidebar": {
+    "textColor": "#ffffff",
+    "backgroundColor": "#000000af"
+  }
+}

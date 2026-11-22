@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "2026-codevember-19-erosion",
+  "title": "Erosion",
+  "created": "2026-11-21",
+  "date": "2026-11-21",
+  "datePrecision": "day",
+  "author": "Lars Berg",
+  "entry": "./",
+  "repository": "https://github.com/larsberg/2026-codevember-19-erosion",
+  "url": "https://larsberg.github.io/2026-codevember-19-erosion/",
+  "description": "Laser strikes scatter 65,536 grains around a sphere. Click the sphere to carve a glowing crater and hear the sand fall back in stereo.",
+  "protocol": "sketch-player:v1",
+  "capabilities": ["play", "pause", "reset", "get-setup", "setup", "save-setup", "load-setup"],
+  "sound": "gesture-required",
+  "audio": "gesture-required",
+  "tags": ["codevember", "erosion", "granular-physics", "threejs"],
+  "madeWith": ["threejs", "box3d", "strudel", "web-audio"],
+  "embed": {
+    "src": "./?embed=1",
+    "allow": ["autoplay", "fullscreen"],
+    "resize": "container",
+    "controls": ["play", "pause", "reset", "get-setup", "setup", "save-setup", "load-setup"],
+    "protocol": "sketch-player:v1",
+    "parentOriginParameter": "parentOrigin"
+  },
+  "thumbnail": {
+    "src": "./thumbnail.jpg",
+    "width": 1138,
+    "height": 1040,
+    "alt": "Faceted sand grains scatter from a spherical pile above a drafting grid."
+  }
+}
