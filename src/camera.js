@@ -59,10 +59,17 @@ export function captureCameraOrbit(camera, controls) {
 export function captureCameraView(camera, controls, follow) {
   const offset = controls.target.clone().sub(follow);
   // Remove floating-point noise from follow translations and angular limits.
-  return { ...captureCameraOrbit(camera, controls), ...roundedView({ offsetX: offset.x, offsetY: offset.y, offsetZ: offset.z }) };
+  return { minDistance: controls.minDistance, maxDistance: controls.maxDistance, ...captureCameraOrbit(camera, controls), ...roundedView({ offsetX: offset.x, offsetY: offset.y, offsetZ: offset.z }) };
 }
 
 export function applyCameraView(view, camera, controls, follow) {
+  controls.minDistance = view.minDistance ?? controls.minDistance;
+  controls.maxDistance = view.maxDistance ?? controls.maxDistance;
+  const far = Math.max(900, controls.maxDistance + 50);
+  if (Number.isFinite(far) && camera.far !== far) {
+    camera.far = far;
+    camera.updateProjectionMatrix();
+  }
   // Flush pending orbit/pan inertia so reloading a view lands exactly on it.
   const damping = controls.enableDamping;
   controls.enableDamping = false;

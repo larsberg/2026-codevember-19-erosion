@@ -11,7 +11,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { applyCameraView, captureCameraView, configureOrbitInputs } from './camera.js';
 import { initPhysics } from './physics.js';
 import { createErosion } from './erosion.js';
-import { FLOOR_Y } from './erosion-field.js';
+import { floorHeight } from './erosion-field.js';
 import { createControls } from './controls.js';
 import { defaultSetup, validateSetup, DEFAULT_CAMERA } from './settings.js';
 import { requestSetup } from './persistence.js';
@@ -24,13 +24,12 @@ import { applyMaterialSettings } from './material-settings.js';
 import { bindMaterialControls } from './material-controls.js';
 import { applyStudioPalette } from './studio-palettes.js';
 import { createSceneEffects } from './scene-effects.js';
-import { createAudio } from './score.js';
 let settings = defaultSetup(), setupLoadError;
 try { settings = await requestSetup(); } catch (error) { setupLoadError = error.message; console.warn(error.message); }
 await initPhysics();
 const canvas = document.querySelector('canvas');
 const renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.outputColorSpace = SRGBColorSpace;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1)); renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = .9;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = PCFShadowMap;
 const scene = new Scene(); scene.background = new Color(settings.studio.background);
@@ -40,7 +39,7 @@ const orbit = new OrbitControls(camera, canvas);
 configureOrbitInputs(orbit);
 orbit.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN };
 orbit.enablePan = true; orbit.touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
-orbit.minDistance = 5; orbit.maxDistance = 600; orbit.minPolarAngle = .09; orbit.maxPolarAngle = Math.PI - .09;
+orbit.minPolarAngle = .09; orbit.maxPolarAngle = Math.PI - .09;
 orbit.enableDamping = true; orbit.dampingFactor = .07;
 const focus = new Vector3();
 const pmrem = new PMREMGenerator(renderer), room = new RoomEnvironment();
@@ -75,15 +74,24 @@ const effects = createSceneEffects(renderer, scene, camera, { clampBeauty: false
 // The floor carries the live stippled plan of the grain stream.
 const span = 24;
 const floor = createStageFloor(span);
-floor.position.y = FLOOR_Y;
 floor.layers.enable(1);
 floor.material.envMap = environment.texture;
-const grid = new GridHelper(span, span, '#545755', '#88877e');
-grid.position.y = FLOOR_Y + .004;
-grid.material.transparent = true;
-grid.material.opacity = .11;
-grid.material.depthWrite = false;
-scene.add(floor, grid);
+scene.add(floor);
+let grid, currentDivisions;
+function configureGrid({ gridDivisions, gridOpacity }) {
+  if (currentDivisions !== gridDivisions) {
+    grid?.removeFromParent();
+    grid?.dispose();
+    grid = new GridHelper(span, gridDivisions, '#545755', '#88877e');
+    grid.material.transparent = true;
+    grid.material.depthWrite = false;
+    scene.add(grid);
+    currentDivisions = gridDivisions;
+  }
+  grid.material.opacity = gridOpacity;
+  grid.position.y = floor.position.y + .004;
+  grid.visible = gridOpacity > 0;
+}
 
 let simulation;
 function rebuild(next) {
@@ -95,16 +103,13 @@ function rebuild(next) {
 }
 rebuild(settings);
 let controls, lightingControls, materialControls;
-let audioStatus;
-const audio = createAudio({ onStatus(state) {
-  audioStatus = state;
-  controls?.audioStatus(state);
-} });
 const lights = { directional: light, hemisphere, spotlight, fill };
 const running = () => settings.motion.playing && !document.hidden;
 
 function configure(restoreCamera = false) {
   simulation.configure(settings);
+  floor.position.y = floorHeight(settings.physics.sphereRadius, settings.physics.floorGap);
+  configureGrid(settings.drafting);
   scene.background.set(settings.studio.background);
   renderer.toneMappingExposure = settings.studio.exposure;
   applyMaterialSettings(floor.material, settings.materials.panels, 'panels');
@@ -117,12 +122,15 @@ function configure(restoreCamera = false) {
   floor.material.envMapIntensity *= env.enabled ? env.intensity : 0;
   applyStudioLighting(settings.lighting, lights, focus);
   lightingControls?.set(settings.lighting);
-  for (const source of [light, fill, spotlight]) source.shadow.intensity = settings.studio.shadowOpacity;
+  // The fixed sphere is the only shadow caster. Refresh for radius, lighting and view edits.
+  for (const source of [light, fill, spotlight]) {
+    source.shadow.intensity = settings.studio.shadowOpacity;
+    source.shadow.autoUpdate = false;
+    source.shadow.needsUpdate = true;
+  }
   effects.configure(settings.lighting.occlusion);
   effects.configureBloom(settings.bloom);
   effects.configureFocus(settings.focus);
-  audio.update(0, running());
-  audio.configure(settings.audio);
   if (restoreCamera) applyCameraView(settings.camera, camera, orbit, focus);
   if (settings.visibility.fps && !controls) mountControls();
   controls?.set(settings);
@@ -174,20 +182,12 @@ const actions = {
     controls?.set(settings);
     controls?.status('Unsaved changes');
   },
-  resetView() { settings.camera = { ...DEFAULT_CAMERA }; configure(true); },
+  resetView() {
+    const { minDistance, maxDistance } = settings.camera;
+    settings = validateSetup({ ...settings, camera: { ...DEFAULT_CAMERA, minDistance, maxDistance } });
+    configure(true);
+  },
   togglePlaying() { change('motion', 'playing', !settings.motion.playing); },
-  toggleSound() { actions.setSoundEnabled(!settings.audio.enabled); },
-  setSoundEnabled(value) {
-    change('audio', 'enabled', value);
-    if (value) return audio.unlock();
-  },
-  async audition() {
-    if (!running()) return;
-    await actions.setSoundEnabled(true);
-    if (audio.unlocked) audio.update(0, running(), undefined, 0, [
-      { from: -1e-9, to: 0, duration: 60 / settings.audio.tempo, serial: 0 },
-    ]);
-  },
   selectPalette(id) {
     settings.lighting = applyStudioPalette(settings.lighting, id, libraryPalettes(settings.paletteLibrary));
     settings.paletteId = id;
@@ -225,7 +225,6 @@ function mountControls() {
   materialControls.set(settings.materials);
   controls.set(settings);
   controls.showControls(false);
-  if (audioStatus) controls.audioStatus(audioStatus);
   if (setupLoadError) controls.status(setupLoadError, true);
 }
 
@@ -250,8 +249,6 @@ document.addEventListener('keydown', event => {
     case 'KeyH': event.preventDefault(); showControls(!uiVisible); break;
     case 'Escape': controls?.close(); break;
     case 'KeyP': event.preventDefault(); actions.togglePlaying(); break;
-    case 'KeyM': actions.toggleSound(); break;
-    case 'KeyF': void actions.audition(); break;
   }
 });
 
@@ -268,28 +265,22 @@ orbit.addEventListener('end', () => {
   settings.camera = captureCameraView(camera, orbit, focus);
   controls?.set(settings);
 });
-canvas.addEventListener('pointerdown', () => {
-  if (settings.audio.enabled) void audio.unlock();
-});
-
 let previousTime;
 renderer.setAnimationLoop(now => {
   const dt = (now - (previousTime ?? now)) / 1000;
   previousTime = now;
-  if (running()) simulation.step(dt, settings.audio.tempo, audio);
-  else audio.update(0, false);
+  if (running()) simulation.step(dt);
   orbit.update();
   render();
-  controls?.frame(audio);
+  controls?.frame();
 });
 document.addEventListener('visibilitychange', () => {
   previousTime = undefined;
-  audio.update(0, running());
 });
 
 const sketch = {
   getSetup: () => structuredClone(settings),
-  getState: () => ({ playing: settings.motion.playing, physics: 'Box3D', ...simulation.state, audio: audio.diagnostics }),
+  getState: () => ({ playing: settings.motion.playing, physics: 'Box3D', ...simulation.state, audio: { enabled: false, running: false } }),
   setup(value) { restore(value); return sketch.getSetup(); },
   play() { if (!settings.motion.playing) actions.togglePlaying(); },
   pause() { if (settings.motion.playing) actions.togglePlaying(); },
@@ -300,7 +291,6 @@ const detachPlayer = attachPlayerBridge(sketch);
 window.addEventListener('pagehide', () => {
   renderer.setAnimationLoop(null);
   detachPlayer();
-  audio.dispose();
   simulation.dispose();
   orbit.dispose();
   effects.dispose();

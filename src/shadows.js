@@ -14,7 +14,9 @@ export function createShadowFollow(light, getOffset = () => new Vector3(-8, 24, 
   const offset = new Vector3(-8, 24, 12), forward = offset.clone().normalize();
   const right = new Vector3().crossVectors(new Vector3(0, 1, 0), forward).normalize();
   const up = new Vector3().crossVectors(forward, right), anchor = new Vector3();
+  const previousTarget = new Vector3();
   return position => {
+    previousTarget.copy(light.target.position);
     offset.copy(getOffset()); forward.copy(offset).normalize();
     right.crossVectors(new Vector3(0, 1, 0), forward);
     if (right.lengthSq() < 1e-8) right.set(1, 0, 0); else right.normalize();
@@ -28,5 +30,6 @@ export function createShadowFollow(light, getOffset = () => new Vector3(-8, 24, 
       .addScaledVector(up, Math.round(anchor.dot(up) / dy) * dy)
       .addScaledVector(forward, anchor.dot(forward));
     light.position.copy(light.target.position).add(offset);
+    if (!previousTarget.equals(light.target.position)) light.shadow.needsUpdate = true;
   };
 }

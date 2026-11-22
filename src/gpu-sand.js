@@ -3,7 +3,7 @@ import {
   FloatType, GLSL3, HalfFloatType, InstancedBufferGeometry, Mesh, NearestFilter, NoBlending, Points,
   RawShaderMaterial, RGBAFormat, UnsignedByteType, Vector3, WebGLRenderTarget,
 } from 'three';
-import { CORE_RADIUS, GRAIN_COUNT, GRAIN_RADIUS, GRAIN_RADIUS_SPREAD, seedSand, SIDE } from './erosion-field.js';
+import { CORE_RADIUS, floorHeight, GRAIN_COUNT, GRAIN_RADIUS, GRAIN_RADIUS_SPREAD, seedSand, SIDE } from './erosion-field.js';
 import { atlasWidth, atlasHeight, precision, scatterFragment, scatterVertex, screenVertex, stepFragment } from './sand-shaders.js';
 import { fields } from './settings.js';
 import { createSandLaser } from './sand-laser.js';
@@ -14,11 +14,11 @@ function dataTexture(data) {
   return tex;
 }
 
-export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS) {
+export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorGap) {
   if (!renderer.extensions.has('EXT_color_buffer_float') && !renderer.extensions.has('EXT_color_buffer_half_float')) {
     throw new Error('Erosion needs WebGL 2 with floating-point render targets.');
   }
-  const initial = seedSand(seed, sphereRadius);
+  const initial = seedSand(seed, sphereRadius, floorGap);
   const start = dataTexture(initial.positions), speed = dataTexture(initial.velocities);
   const options = { type: HalfFloatType, depthBuffer: false, minFilter: NearestFilter, magFilter: NearestFilter, generateMipmaps: false };
   const contacts = new WebGLRenderTarget(atlasWidth, atlasHeight, { ...options, type: UnsignedByteType });
@@ -26,13 +26,13 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS) {
   const physicsUniforms = Object.fromEntries(Object.entries(fields.physics).map(([key, [, initial]]) =>
     [key, { value: initial }]));
   // Older saves call the strength of attraction toward the origin "gravity".
-  const { gravity: attraction, sphereRadius: radius, ...grainUniforms } = physicsUniforms;
+  const { gravity: attraction, sphereRadius: radius, floorGap: gap, ...grainUniforms } = physicsUniforms;
   radius.value = sphereRadius;
   const uniforms = {
     ...grainUniforms, attraction,
     positions: { value: start }, velocities: { value: speed }, contacts: { value: contacts.texture },
     center: { value: new Vector3() },
-    dt: { value: 0 }, radius,
+    dt: { value: 0 }, radius, floorY: { value: floorHeight(sphereRadius, floorGap) },
   };
   const common = { glslVersion: GLSL3, depthTest: false, depthWrite: false, toneMapped: false };
   const scatterGeometry = new InstancedBufferGeometry();
@@ -43,8 +43,9 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS) {
   }));
   scatter.geometry.setAttribute('position', new BufferAttribute(Uint16Array.from({ length: GRAIN_COUNT }, (_, id) => id), 1));
   scatter.frustumCulled = false;
-  const laser = createSandLaser(seed, uniforms.positions, scatter.geometry.attributes.position);
+  const laser = createSandLaser(seed, uniforms.positions, scatter.geometry.attributes.position, radius);
   uniforms.impactPoint = laser.impactPoint;
+  uniforms.impactRow = laser.impactRow;
   uniforms.laserAxis = laser.axis;
   uniforms.firing = { value: false };
   const screen = new Mesh(new BufferGeometry(), new RawShaderMaterial({
@@ -53,15 +54,18 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS) {
   screen.geometry.setAttribute('position', new BufferAttribute(new Float32Array([-1,-1,3,-1,-1,3]), 2));
   screen.frustumCulled = false;
   const camera = new Camera(), originalColor = new Color();
+  const previousPositions = { value: start };
   let next = 0;
   return {
-    positions: uniforms.positions,
+    positions: uniforms.positions, previousPositions, interpolation: { value: 0 }, floorY: uniforms.floorY,
     beam: laser.beam,
+    heat: laser.heat,
     grainRadius(id) { return GRAIN_RADIUS + GRAIN_RADIUS_SPREAD * initial.velocities[4 * id + 3]; },
     configure(physics, laserSettings) {
       for (const [key, uniform] of Object.entries(physicsUniforms)) {
         uniform.value = physics[key] ?? fields.physics[key][1];
       }
+      uniforms.floorY.value = floorHeight(radius.value, gap.value);
       if (laserSettings) laser.configure(laserSettings);
     },
     step(dt, center) {
@@ -80,6 +84,7 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS) {
         const out = states[next];
         renderer.setRenderTarget(out);
         renderer.render(screen, camera);
+        previousPositions.value = uniforms.positions.value;
         uniforms.positions.value = out.textures[0]; uniforms.velocities.value = out.textures[1];
         next = 1-next;
       } finally {

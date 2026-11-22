@@ -6,16 +6,30 @@
     "playing": true
   },
   "physics": {
-    "gravity": 4.9,
-    "friction": 0.41,
-    "damping": 0.55,
-    "restitution": 0.04,
+    "sphereRadius": 0.865,
+    "floorGap": 0.91,
+    "gravity": 3.7,
+    "friction": 1.97,
+    "damping": 0.5,
+    "restitution": 0.17,
     "stiffness": 0.05,
-    "settleSpeed": 0.001
+    "settleSpeed": 0.03,
+    "rotationScale": 6.5
   },
   "laser": {
-    "color": "#383fff",
-    "frequency": 2.23
+    "color": "#ffe438",
+    "frequency": 2.51
+  },
+  "drafting": {
+    "gridOpacity": 0.48,
+    "gridDivisions": 24,
+    "planOpacity": 1,
+    "planColor": "#615241",
+    "pointSize": 1,
+    "samplePercent": 100,
+    "slice": false,
+    "sliceHeight": 1.82,
+    "sliceThickness": 0.02
   },
   "studio": {
     "background": "#eee9df",
@@ -36,215 +50,18 @@
     "offset": 0
   },
   "audio": {
-    "enabled": true,
-    "volume": 0.3,
-    "tempo": 80,
-    "voices": [
-      {
-        "level": 0.24,
-        "gate": 0.88,
-        "attack": 0.003,
-        "decay": 0.15,
-        "sustain": 0.8,
-        "release": 0.06,
-        "lowpass": 2600,
-        "resonance": 0.7,
-        "highpass": 20,
-        "fm": 0.18,
-        "harmonicity": 2,
-        "drive": 0.04,
-        "pan": 0.35,
-        "reverb": 0.02,
-        "roomSize": 0.6,
-        "delay": 0,
-        "delayTime": 0.75,
-        "delayFeedback": 0.25,
-        "enabled": true,
-        "sound": "sine",
-        "note": 74,
-        "rhythm": "..x.x..x",
-        "modulations": {
-          "lowpass": {
-            "enabled": false,
-            "corner": 0,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 120,
-            "max": 4800
-          },
-          "resonance": {
-            "enabled": false,
-            "corner": 1,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.4,
-            "max": 6
-          },
-          "highpass": {
-            "enabled": false,
-            "corner": 2,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 15,
-            "max": 180
-          },
-          "fm": {
-            "enabled": false,
-            "corner": 3,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.1,
-            "max": 5
-          },
-          "harmonicity": {
-            "enabled": false,
-            "corner": 4,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.5,
-            "max": 4
-          },
-          "drive": {
-            "enabled": false,
-            "corner": 5,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.02,
-            "max": 1.5
-          },
-          "delay": {
-            "enabled": false,
-            "corner": 6,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.02,
-            "max": 0.65
-          },
-          "reverb": {
-            "enabled": false,
-            "corner": 7,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.03,
-            "max": 0.8
-          },
-          "pan": {
-            "enabled": false,
-            "corner": 8,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.2,
-            "max": 0.8
-          }
-        }
-      },
-      {
-        "level": 0.28,
-        "gate": 0.88,
-        "attack": 0.006,
-        "decay": 0.15,
-        "sustain": 0.8,
-        "release": 0.14,
-        "lowpass": 7000,
-        "resonance": 0.7,
-        "highpass": 20,
-        "fm": 1,
-        "harmonicity": 2,
-        "drive": 0.04,
-        "pan": 0.65,
-        "reverb": 0.02,
-        "roomSize": 0.6,
-        "delay": 0,
-        "delayTime": 0.75,
-        "delayFeedback": 0.25,
-        "enabled": true,
-        "sound": "triangle",
-        "note": 43,
-        "rhythm": "x.....x.",
-        "modulations": {
-          "lowpass": {
-            "enabled": false,
-            "corner": 15,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 120,
-            "max": 4800
-          },
-          "resonance": {
-            "enabled": false,
-            "corner": 14,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.4,
-            "max": 6
-          },
-          "highpass": {
-            "enabled": false,
-            "corner": 13,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 15,
-            "max": 180
-          },
-          "fm": {
-            "enabled": false,
-            "corner": 12,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.1,
-            "max": 5
-          },
-          "harmonicity": {
-            "enabled": false,
-            "corner": 11,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.5,
-            "max": 4
-          },
-          "drive": {
-            "enabled": false,
-            "corner": 10,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.02,
-            "max": 1.5
-          },
-          "delay": {
-            "enabled": false,
-            "corner": 9,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.02,
-            "max": 0.65
-          },
-          "reverb": {
-            "enabled": false,
-            "corner": 8,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.03,
-            "max": 0.8
-          },
-          "pan": {
-            "enabled": false,
-            "corner": 7,
-            "heightMin": 0,
-            "heightMax": 4,
-            "min": 0.2,
-            "max": 0.8
-          }
-        }
-      }
-    ]
+    "enabled": false,
+    "volume": 0.3
   },
   "visibility": {
-    "fps": false
+    "fps": true
   },
   "camera": {
-    "yaw": 131.1027608803,
-    "elevation": 12.6920963388,
-    "distance": 7.8255917921,
+    "yaw": 110.6166673786,
+    "elevation": 17.5928401287,
+    "distance": 6.7403415706,
+    "minDistance": 1,
+    "maxDistance": 600,
     "offsetX": 0,
     "offsetY": 0,
     "offsetZ": 0
@@ -313,9 +130,9 @@
       "backColor": "#fff1df"
     },
     "occlusion": {
-      "enabled": false,
-      "intensity": 1.5,
-      "radius": 0.8,
+      "enabled": true,
+      "intensity": 1.78,
+      "radius": 0.38,
       "aoOnly": false
     }
   },

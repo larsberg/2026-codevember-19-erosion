@@ -2,8 +2,8 @@ import Box3D from 'box3d-wasm/standard';
 import { Quaternion, Vector3 } from 'three';
 import { validateRigidBody } from './rigid-body-settings.js';
 
-// Four Box3D substeps resolve the edge springs in each fixed tick.
-export const PHYSICS_STEP = 1 / 60;
+// Display frames interpolate between fixed sand simulation ticks.
+export const PHYSICS_STEP = 1 / 40;
 let engine, initialization;
 export function initPhysics() {
   return initialization ??= Box3D().then(module => { engine = module; });
@@ -42,6 +42,7 @@ export function createPhysics(value) {
   }
   return {
     world, entries, joints,
+    get interpolation() { return accumulator / PHYSICS_STEP; },
     onSync(listener) { syncListeners.add(listener); return () => syncListeners.delete(listener); },
     onBeforeStep(listener) { stepListeners.add(listener); return () => stepListeners.delete(listener); },
     onAfterStep(listener) { afterStepListeners.add(listener); return () => afterStepListeners.delete(listener); },
