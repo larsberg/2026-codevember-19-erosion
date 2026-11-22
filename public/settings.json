@@ -18,9 +18,10 @@
   },
   "laser": {
     "color": "#ffe438",
-    "frequency": 2.3
+    "frequency": 1.05
   },
   "drafting": {
+    "darkMode": false,
     "gridOpacity": 0.48,
     "gridDivisions": 24,
     "planOpacity": 1,
@@ -31,6 +32,18 @@
     "sliceHeight": 12,
     "sliceThickness": 6
   },
+  "darkPalette": {
+    "cyan": "#00e4f2",
+    "magenta": "#fb25cc",
+    "yellow": "#fff02a",
+    "white": "#f6faff",
+    "background": "#0b1119",
+    "floor": "#141d28",
+    "grid": "#899fb0",
+    "axes": "#c4d6e6",
+    "projection": "#a8b7c1",
+    "beam": "#fff7db"
+  },
   "studio": {
     "background": "#eee9df",
     "exposure": 0.9,
@@ -38,9 +51,9 @@
   },
   "bloom": {
     "enabled": false,
-    "strength": 0.85,
-    "radius": 0.45,
-    "threshold": 1.4
+    "strength": 0.35,
+    "radius": 0.13,
+    "threshold": 0.8
   },
   "focus": {
     "enabled": false,
@@ -59,14 +72,20 @@
     "cutoffHz": 360,
     "echoLevel": 0.17,
     "echoTimeMs": 250,
-    "echoFeedback": 0.32
+    "echoFeedback": 0.32,
+    "sandLevel": 0.1,
+    "sandCutoffHz": 505,
+    "sandTexture": 30,
+    "sandDelayMs": 755,
+    "sandRiseMs": 1475,
+    "sandDecayMs": 1080
   },
   "visibility": {
     "fps": false
   },
   "camera": {
-    "yaw": -152.9937212182,
-    "elevation": 20.3125480394,
+    "yaw": 175.3014664646,
+    "elevation": 8.564501156,
     "distance": 5.6262560202,
     "minDistance": 1,
     "maxDistance": 600,
@@ -86,7 +105,7 @@
       "offsetZ": 50,
       "angle": 50,
       "penumbra": 0.5,
-      "castShadow": true,
+      "castShadow": false,
       "softness": 1.2,
       "shadowBias": -0.00001,
       "normalBias": 0.002

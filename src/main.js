@@ -79,16 +79,18 @@ const floor = createStageFloor(span);
 floor.layers.enable(1);
 floor.material.envMap = environment.texture;
 scene.add(floor);
-let grid, currentDivisions;
-function configureGrid({ gridDivisions, gridOpacity }) {
-  if (currentDivisions !== gridDivisions) {
+let grid, currentDivisions, currentAxes, currentGridColor;
+function configureGrid({ gridDivisions, gridOpacity }, palette) {
+  const axes = palette?.axes ?? '#545755', lines = palette?.grid ?? '#88877e';
+  if (currentDivisions !== gridDivisions || currentAxes !== axes || currentGridColor !== lines) {
     grid?.removeFromParent();
     grid?.dispose();
-    grid = new GridHelper(span, gridDivisions, '#545755', '#88877e');
+    grid = new GridHelper(span, gridDivisions, axes, lines);
     grid.material.transparent = true;
     grid.material.depthWrite = false;
     scene.add(grid);
     currentDivisions = gridDivisions;
+    currentAxes = axes; currentGridColor = lines;
   }
   grid.material.opacity = gridOpacity;
   grid.position.y = floor.position.y + .004;
@@ -124,15 +126,27 @@ function syncSound() {
   if (!running()) simulation.clearAim();
 }
 
+function syncMaterialControls() {
+  const { materials, drafting, darkPalette } = settings;
+  materialControls?.set(drafting.darkMode
+    ? { ...materials, panels: { ...materials.panels, color: darkPalette.floor } }
+    : materials);
+}
+
 function configure(restoreCamera = false) {
   syncSound();
   simulation.configure(settings);
   floor.position.y = floorHeight(settings.physics.sphereRadius, settings.physics.floorGap);
-  configureGrid(settings.drafting);
-  scene.background.set(settings.studio.background);
+  const palette = settings.drafting.darkMode ? settings.darkPalette : null;
+  configureGrid(settings.drafting, palette);
+  scene.background.set(palette?.background ?? settings.studio.background);
   renderer.toneMappingExposure = settings.studio.exposure;
   applyMaterialSettings(floor.material, settings.materials.panels, 'panels');
-  materialControls?.set(settings.materials);
+  if (palette) {
+    floor.material.color.set(palette.floor);
+    floor.material.emissive.multiply(floor.material.color);
+  }
+  syncMaterialControls();
   configureEnvironment();
   const env = settings.lighting.environment;
   scene.environmentRotation.y = env.rotation * Math.PI / 180;
@@ -241,10 +255,11 @@ function mountControls() {
     change('lighting', group, { ...settings.lighting[group], [key]: value });
   });
   materialControls = bindMaterialControls(controls.element, (group, key, value) => {
-    change('materials', group, { ...settings.materials[group], [key]: value });
+    if (settings.drafting.darkMode && group === 'panels' && key === 'color') change('darkPalette', 'floor', value);
+    else change('materials', group, { ...settings.materials[group], [key]: value });
   });
   lightingControls.set(settings.lighting);
-  materialControls.set(settings.materials);
+  syncMaterialControls();
   controls.set(settings);
   controls.showControls(false);
   if (setupLoadError) controls.status(setupLoadError, true);

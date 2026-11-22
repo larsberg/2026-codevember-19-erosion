@@ -20,8 +20,12 @@ export function createErosion(renderer, settings, onStrike) {
     time += dt;
     gpu.step(dt, center);
   });
-  gpu.configure(settings.physics, settings.laser);
-  grains.configure(settings.drafting);
+  function configureSand(value) {
+    const palette = value.drafting.darkMode ? value.darkPalette : null;
+    gpu.configure(value.physics, value.laser, palette?.beam);
+    grains.configure(value.drafting, palette);
+  }
+  configureSand(settings);
   return {
     root, aim: gpu.aim, clearAim: gpu.clearAim,
     getSphere(target) { return target.set(center, radius); },
@@ -38,8 +42,7 @@ export function createErosion(renderer, settings, onStrike) {
         radius = nextRadius;
       }
       physics.configure({ gravity: 0, friction: value.physics.friction });
-      gpu.configure(value.physics, value.laser);
-      grains.configure(value.drafting);
+      configureSand(value);
     },
     step(dt) {
       physics.step(dt);

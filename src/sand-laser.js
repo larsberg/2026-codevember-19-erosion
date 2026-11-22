@@ -55,7 +55,7 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
   const segment = new BufferGeometry();
   segment.setAttribute('position', new BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0]), 3));
   const beam = new Line(segment, new ShaderMaterial({
-    uniforms: { source, impactPoint, impactRow, axis, sphereCenter, sphereRadius, brightness, beamColor },
+    uniforms: { source, impactPoint, impactRow, axis, sphereCenter, sphereRadius, brightness, beamColor, darkMode: { value: false } },
     transparent: true, depthWrite: false, toneMapped: false,
     vertexShader: `uniform vec3 source, axis, sphereCenter;
       uniform float sphereRadius; uniform sampler2D impactPoint; uniform int impactRow;
@@ -64,10 +64,10 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
         vec3 endPoint = hit.w > .5 ? hit.xyz : sphereCenter + sphereRadius * axis;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(mix(source, endPoint, position.x), 1.);
       }`,
-    fragmentShader: `uniform float brightness; uniform vec3 beamColor;
+    fragmentShader: `uniform float brightness; uniform vec3 beamColor; uniform bool darkMode;
       void main() {
-        // Limit the ink reflectance even for a bright tint from an older setup.
-        vec3 ink = beamColor * min(1., .035 / max(.001, max(beamColor.r, max(beamColor.g, beamColor.b))));
+        vec3 ink = darkMode ? beamColor
+                            : beamColor * min(1., .035 / max(.001, max(beamColor.r, max(beamColor.g, beamColor.b))));
         gl_FragColor = vec4(ink, brightness);
         #include <colorspace_fragment>
       }`,
@@ -81,8 +81,9 @@ export function createSandLaser(seed, positions, grainIds, sphereRadius = { valu
     aim(normal, sight) { pending.push({ normal: normal.clone(), sight: sight.clone() }); },
     clearAim() { pending.length = 0; },
     heat: { impactPoint, spots, sphereCenter, sphereRadius },
-    configure(settings) {
-      beamColor.value.set(settings.color);
+    configure(settings, darkBeamColor) {
+      beamColor.value.set(darkBeamColor ?? settings.color);
+      beam.material.uniforms.darkMode.value = darkBeamColor != null;
       const wasAutomatic = frequency > 0;
       frequency = settings.frequency;
       if (wasAutomatic && frequency === 0) {

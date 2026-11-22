@@ -71,12 +71,12 @@ export function createGpuSand(renderer, seed, sphereRadius = CORE_RADIUS, floorG
     beam: laser.beam,
     heat: laser.heat,
     grainRadius(id) { return GRAIN_RADIUS + GRAIN_RADIUS_SPREAD * initial.velocities[4 * id + 3]; },
-    configure(physics, laserSettings) {
+    configure(physics, laserSettings, darkBeamColor) {
       for (const [key, uniform] of Object.entries(physicsUniforms)) {
         uniform.value = physics[key] ?? fields.physics[key][1];
       }
       uniforms.floorY.value = floorHeight(radius.value, gap.value);
-      if (laserSettings) laser.configure(laserSettings);
+      if (laserSettings) laser.configure(laserSettings, darkBeamColor);
     },
     step(dt, center) {
       uniforms.dt.value = dt;

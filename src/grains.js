@@ -17,6 +17,8 @@ const minerals = [
   { name: 'Shell', color: '#efe3c8', roughness: .49, metalness: .06, sides: 4, scale: [1,.46,.7] },
   { name: 'Mica', color: '#b29b78', roughness: .21, metalness: .83, sides: 5, scale: [1,.30,.67] },
 ];
+// Quartz, sandstone, basalt, ochre, shell and mica keep their individual finishes.
+const mineralInks = ['cyan', 'magenta', 'yellow', 'cyan', 'white', 'magenta'];
 function hull(sides, random) {
   const points = [new Vector3(.12,.82,.18),new Vector3(-.21,-.78,-.08)];
   for (let i = 0; i < sides; i++) {
@@ -88,6 +90,8 @@ export function createGrains(gpu, seed) {
   const geometry = new InstancedBufferGeometry();
   geometry.setIndex(template.index);
   for (const [key, attribute] of Object.entries(template.attributes)) geometry.setAttribute(key, attribute);
+  const colors = geometry.attributes.color, lightColors = colors.array.slice();
+  let appliedPalette;
   geometry.instanceCount = instanceCount;
   poses.forEach((data, i) => geometry.setAttribute('pose' + i, new InstancedBufferAttribute(data, 4)));
   shades.forEach((data, i) => geometry.setAttribute('shade' + i, new InstancedBufferAttribute(data, 3)));
@@ -194,14 +198,27 @@ export function createGrains(gpu, seed) {
   plan.frustumCulled = false;
   return {
     root, plan, hullCount: minerals.length,
-    configure(drafting) {
+    configure(drafting, palette) {
+      // Update only the shared hull vertices so a mode change preserves every grain in flight.
+      const swatches = palette && mineralInks.map(key => palette[key]);
+      const paletteKey = swatches?.join();
+      if (appliedPalette !== paletteKey) {
+        if (swatches) {
+          const inks = swatches.map(hex => new Color(hex));
+          for (let vertex = 0; vertex < colors.count; vertex++) {
+            inks[geometry.attributes.grainBatch.getX(vertex)].toArray(colors.array, 3 * vertex);
+          }
+        } else colors.array.set(lightColors);
+        appliedPalette = paletteKey;
+        colors.needsUpdate = true;
+      }
       const count = Math.round(GRAIN_COUNT * drafting.samplePercent / 100);
       dots.setDrawRange(0, count);
       dots.boundingSphere.center.y = gpu.floorY.value;
       plan.visible = drafting.planOpacity > 0 && count > 0;
       const { opacity, ink, pointSize, sliceHeight, halfThickness } = projectionMaterial.uniforms;
       opacity.value = drafting.planOpacity;
-      ink.value.set(drafting.planColor);
+      ink.value.set(palette?.projection ?? drafting.planColor);
       pointSize.value = drafting.pointSize;
       sliceHeight.value = drafting.sliceHeight;
       halfThickness.value = drafting.slice ? drafting.sliceThickness / 2 : -1;

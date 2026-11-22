@@ -1,3 +1,4 @@
+import { Color } from 'three';
 import { CORE_RADIUS, DEFAULT_FLOOR_GAP, floorHeight } from './erosion-field.js';
 import { defaultLighting, validateLighting } from './lighting-settings.js';
 import { defaultMaterials, validateMaterials } from './material-settings.js';
@@ -22,6 +23,7 @@ export const fields = {
     frequency: ['Pulse frequency (Hz)', .30, 0, 3, .01],
   },
   drafting: {
+    darkMode: ['Dark Mode', false],
     gridOpacity: ['Floor grid opacity', .11, 0, 1, .01],
     gridDivisions: ['Grid cells per side', 24, 2, 96, 1],
     planOpacity: ['Grain projection opacity', .128, 0, 1, .001],
@@ -31,6 +33,13 @@ export const fields = {
     slice: ['Project a horizontal slice', false],
     sliceHeight: ['Slice center above floor (units)', -floorHeight(CORE_RADIUS), 0, 12, .005],
     sliceThickness: ['Slice thickness (units)', .25, .02, 6, .01],
+  },
+  darkPalette: {
+    cyan: ['Cyan grains', '#00e4f2'], magenta: ['Magenta grains', '#fb25cc'],
+    yellow: ['Yellow grains', '#fff02a'], white: ['White grains', '#f6faff'],
+    background: ['Background', '#0b1119'], floor: ['Floor', '#141d28'],
+    grid: ['Grid lines', '#899fb0'], axes: ['Grid axes', '#c4d6e6'],
+    projection: ['Projection ink', '#a8b7c1'], beam: ['Laser line', '#dcdcdb'],
   },
   studio: { background: ['Background', '#eee9df'], exposure: ['Exposure', .9, .1, 3, .01], shadowOpacity: ['Ground shadow opacity', .32, 0, 1, .01] },
   bloom: { enabled: ['Enable bloom', false], strength: ['Bloom strength', .85, 0, 4, .05], radius: ['Bloom radius', .45, 0, 1, .01], threshold: ['Bloom threshold', 1.4, 0, 3, .01] },
@@ -45,6 +54,12 @@ export const fields = {
     echoLevel: ['Echo level', .14, 0, 1, .01],
     echoTimeMs: ['Echo time (ms)', 290, 40, 950, 5],
     echoFeedback: ['Echo feedback', .18, 0, .85, .01],
+    sandLevel: ['Falling sand level', .55, 0, 1, .01],
+    sandCutoffHz: ['Sand tone cutoff (Hz)', 330, 80, 4000, 5],
+    sandTexture: ['Clumpiness (%)', 55, 0, 100, 1],
+    sandDelayMs: ['Delay after strike (ms)', 220, 0, 2000, 5],
+    sandRiseMs: ['Swell time (ms)', 340, 5, 1800, 5],
+    sandDecayMs: ['Fade time (ms)', 860, 40, 4000, 10],
   },
   visibility: { fps: ['Show frame-rate meter', false] },
   camera: {
@@ -97,6 +112,14 @@ export function validateSetup(value) {
   if (!Number.isInteger(result.drafting.gridDivisions)) throw Error('Grid cells per side must be a whole number.');
   result.lighting = validateLighting(Object.fromEntries(Object.entries(result.lighting).map(([key, defaults]) => [key, { ...defaults, ...value.lighting?.[key] }])));
   result.materials = validateMaterials(value.materials);
+  // Earlier saves derived these four dark colors from the artist's light palette.
+  if (!value.darkPalette) {
+    const palette = result.darkPalette;
+    palette.background = '#' + new Color(result.studio.background).multiply(new Color('#0d141e')).getHexString();
+    palette.floor = '#' + new Color(result.materials.panels.color).multiply(new Color('#192435')).getHexString();
+    palette.projection = '#' + new Color(result.drafting.planColor).lerp(new Color('#bbcfdd'), .72).getHexString();
+    palette.beam = '#' + new Color(result.laser.color).lerp(new Color('#ffffff'), .70).getHexString();
+  }
   result.paletteLibrary = validatePaletteLibrary(value.paletteLibrary ?? result.paletteLibrary);
   result.paletteId = value.paletteId ?? result.paletteId;
   if (!libraryPalettes(result.paletteLibrary).some(p => p.id === result.paletteId)) throw Error('Invalid palette.');

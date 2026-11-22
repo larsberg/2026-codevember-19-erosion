@@ -1,4 +1,5 @@
 import { resumeAudioContext } from './audio-autoplay.js';
+import { createFallingSand } from './falling-sand.js';
 
 const bassOrbit = 1;
 
@@ -39,10 +40,11 @@ export function createLaserScore({ load = () => import('@strudel/web'), resume =
   sample = new URL('./audio/bass-strike.wav', document.baseURI).href,
   makeEcho = createEcho, onError = console.warn } = {}) {
   let api, context, loading, loaded = false, disposed = false, wanted = false, activation, echo;
-  let sound, hits = 0, manualHits = 0;
+  let sound, sand, hits = 0, manualHits = 0;
   const audible = () => wanted && loaded && context?.state === 'running';
   function reset() {
     echo?.dispose(); echo = undefined;
+    sand?.dispose(); sand = undefined;
     if (loaded) api.resetGlobalEffects();
   }
   function unlock() {
@@ -74,7 +76,11 @@ export function createLaserScore({ load = () => import('@strudel/web'), resume =
       const next = sound.enabled && playing && sound.volume > 0;
       if (!next && wanted) { reset(); activation?.cancel(); activation = undefined; }
       wanted = next;
-      if (wanted) { echo?.configure(settings, previous); prime(); unlock(); }
+      if (wanted) {
+        echo?.configure(settings, previous);
+        sand?.configure(sound);
+        prime(); unlock();
+      }
     },
     hit(height, pan, manual = false) {
       if (!audible()) return;
@@ -88,7 +94,12 @@ export function createLaserScore({ load = () => import('@strudel/web'), resume =
         attack: sound.attackMs / 1000, release: sound.releaseMs / 1000,
         cutoff: sound.cutoffHz * (1 + height * 2 / 9),
       };
-      void api.superdough(voice, now + .015, sound.lengthMs / 1000).catch(onError);
+      const strikeTime = now + .015;
+      void api.superdough(voice, strikeTime, sound.lengthMs / 1000).catch(onError);
+      if (sound.sandLevel > 0) {
+        sand ??= createFallingSand(context, api.getSuperdoughAudioController().output.destinationGain, sound);
+        sand.hit(strikeTime, pan);
+      }
     },
     dispose() {
       disposed = true; wanted = false; reset(); activation?.cancel();

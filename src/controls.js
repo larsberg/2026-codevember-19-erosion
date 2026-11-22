@@ -31,11 +31,16 @@ export function createControls({settings,change,save,reload,resetView,exportDraw
         <section id="panel-mesh" role="tabpanel" aria-labelledby="tab-mesh"><button data-action="export">Export PNG</button></section>
         <section id="panel-motion" role="tabpanel" aria-labelledby="tab-motion" hidden><button data-action="regenerate">Regenerate</button></section>
         <section id="panel-physics" role="tabpanel" aria-labelledby="tab-physics" hidden>${group('physics')}<p class="control-heading">Laser</p>${group('laser')}</section>
-        <section id="panel-drafting" role="tabpanel" aria-labelledby="tab-drafting" hidden>${group('drafting')}</section>
+        <section id="panel-drafting" role="tabpanel" aria-labelledby="tab-drafting" hidden>
+          ${field('drafting','darkMode')}
+          <details class="material-group dark-colors" open><summary>Dark Mode colors</summary>${group('darkPalette')}</details>
+          ${group('drafting',Object.keys(fields.drafting).filter(key=>key!=='darkMode'))}
+        </section>
         <section id="panel-palettes" role="tabpanel" aria-labelledby="tab-palettes" hidden>${paletteWorkshopMarkup()}</section>
         <section id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
           <div class="audio-toolbar"><button type="button" class="audio-start">Enable sounds</button><button type="button" class="audio-stop">Mute sounds</button></div>
           <p class="audio-status" role="status"></p>${group('audio',['volume'])}
+          <p class="control-heading">Falling sand</p>${group('audio',['sandLevel','sandCutoffHz','sandTexture','sandDelayMs','sandRiseMs','sandDecayMs'])}
           <p class="control-heading">Bass strike</p>${group('audio',['transpose','attackMs','lengthMs','releaseMs','cutoffHz'])}
           <p class="control-heading">Echo</p>${group('audio',['echoLevel','echoTimeMs','echoFeedback'])}
         </section>
@@ -89,6 +94,13 @@ export function createControls({settings,change,save,reload,resetView,exportDraw
     stats?.update();
   },set(value){
     current=value;
+    query('.dark-colors').hidden = !value.drafting.darkMode;
+    query('label[for="drafting-planColor"]').hidden = value.drafting.darkMode;
+    for (const [group, key, darkKey] of [['studio','background','background'], ['laser','color','beam']]) {
+      const input = query(`#${group}-${key}`);
+      input.dataset.group = value.drafting.darkMode ? 'darkPalette' : group;
+      input.dataset.key = value.drafting.darkMode ? darkKey : key;
+    }
     enableSound.disabled = value.audio.enabled;
     muteSound.disabled = !value.audio.enabled;
     const soundStatus = value.audio.enabled ? 'Sound enabled' : 'Sound muted';

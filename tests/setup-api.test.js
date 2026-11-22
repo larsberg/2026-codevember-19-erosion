@@ -18,15 +18,19 @@ test('atomic GET/PUT round trip uses Erosion ownership and retains the complete 
   const setup=defaultSetup();setup.generation.seed=184847;setup.physics.gravity=6;setup.camera.yaw=67;setup.bloom.enabled=true;setup.focus.enabled=true;
   Object.assign(setup.camera, { minDistance: .5, maxDistance: 3200 });
   Object.assign(setup.physics, { sphereRadius: 1.35, floorGap: .42, damping: 2.4, restitution: .35, stiffness: .8, settleSpeed: .12, rotationScale: 17.5 });
-  Object.assign(setup.drafting, { gridOpacity: .5, gridDivisions: 8, planOpacity: 0, planColor: '#654321',
+  Object.assign(setup.drafting, { darkMode: true, gridOpacity: .5, gridDivisions: 8, planOpacity: 0, planColor: '#654321',
     pointSize: 4, samplePercent: 16, slice: true, sliceHeight: .6, sliceThickness: .07 });
   setup.laser = { color: '#44aaff', frequency: 1.5 };
+  Object.assign(setup.darkPalette, { cyan: '#33a544', magenta: '#510229', yellow: '#f9bf13',
+    white: '#c7d7ef', floor: '#113b51', background: '#320723', projection: '#9cb579',
+    grid: '#735011', axes: '#de5497', beam: '#a03422' });
   setup.materials.panels.roughness=.13;setup.audio.enabled=false;setup.lighting.environment.intensity=1.8;
   Object.assign(setup.lighting.spotlight,{penumbra:.9,softness:7.5,intensity:11200});
   const audible=await request('PUT',{...setup,audio:{enabled:true,volume:.2}});
   assert.deepEqual(audible.body.audio,{...defaultSetup().audio,enabled:true,volume:.2});
   Object.assign(setup.audio, { transpose: 5, attackMs: 60, lengthMs: 150, releaseMs: 230,
-    cutoffHz: 650, echoLevel: .29, echoTimeMs: 470, echoFeedback: .54 });
+    cutoffHz: 650, echoLevel: .29, echoTimeMs: 470, echoFeedback: .54, sandLevel: .72,
+    sandTexture: 70, sandCutoffHz: 930, sandDelayMs: 0, sandRiseMs: 60, sandDecayMs: 1400 });
   assert.equal((await request('PUT',setup,'01-fold')).status,409);
   assert.equal((await request('PUT',setup)).status,200);
   const saved=await request('GET');assert.equal(saved.headers['X-Sketch-Id'],'19-erosion');assert.deepEqual(saved.body,setup);
