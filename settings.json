@@ -74,7 +74,7 @@
     "echoTimeMs": 250,
     "echoFeedback": 0.32,
     "sandLevel": 0.02,
-    "sandCutoffHz": 1810,
+    "sandCutoffHz": 1065,
     "sandTexture": 30,
     "sandDelayMs": 755,
     "sandRiseMs": 1475,
@@ -84,9 +84,9 @@
     "fps": false
   },
   "camera": {
-    "yaw": -98.6679751499,
-    "elevation": 18.7374548881,
-    "distance": 5.6262560202,
+    "yaw": -48.1696609163,
+    "elevation": 12.2743278618,
+    "distance": 5.0001586175,
     "minDistance": 1,
     "maxDistance": 600,
     "offsetX": 0,
